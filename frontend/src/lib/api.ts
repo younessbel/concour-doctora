@@ -398,6 +398,13 @@ export const api = {
     results: (sessionId: number) => get<OfficialResult[]>(`/deliberation/results/?session=${sessionId}`),
   },
 
+  // ── Examinations / Rooms ───────────────────────────────────────────────────
+  examinations: {
+    rooms: {
+      delete: (id: number) => del<void>(`/examinations/rooms/${id}/`),
+    },
+  },
+
   // ── PV Reports ──────────────────────────────────────────────────────────────
   pv: {
     list: () => get<PaginatedResponse<PVReport>>('/pv/'),

@@ -64,7 +64,7 @@ export default function App() {
           } />
 
           <Route path={ROUTES.EXAM_PLANNING} element={
-            <ProtectedRoute allowedRoles={[ADMIN, CFD_HEAD]}>
+            <ProtectedRoute>
               <ExamPlanningPage />
             </ProtectedRoute>
           } />

@@ -13,12 +13,24 @@ export default defineConfig(({mode}) => {
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
+        'lucide-react': path.resolve(__dirname, 'src/lib/lucide-react.ts'),
+        'motion/react': path.resolve(__dirname, 'src/lib/motion-react.ts'),
+        scheduler: path.resolve(__dirname, 'node_modules/scheduler/cjs/scheduler.development.js'),
+        'scheduler/unstable_mock': path.resolve(__dirname, 'node_modules/scheduler/cjs/scheduler-unstable_mock.development.js'),
+        'scheduler/unstable_post_task': path.resolve(__dirname, 'node_modules/scheduler/cjs/scheduler-unstable_post_task.development.js'),
       },
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      proxy: {
+        '/api': {
+          target: 'https://concour-doctora.onrender.com',
+          changeOrigin: true,
+          secure: true,
+        },
+      },
     },
   };
 });

@@ -8,7 +8,7 @@ interface AuthContextValue {
     user: AuthUser | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (username: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<void>;
     logout: () => Promise<void>;
     changePassword: (newPassword: string, currentPassword?: string) => Promise<void>;
     refreshUser: () => Promise<void>;
@@ -123,11 +123,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }, [fetchMe]);
 
 
-    const login = useCallback(async (username: string, password: string) => {
+    const login = useCallback(async (email: string, password: string) => {
         const res = await fetch(`${API_BASE}/auth/login/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, password }),
+            body: JSON.stringify({ email, password }),
         });
 
         if (!res.ok) {
@@ -137,10 +137,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         const data = await res.json();
         setTokens(data.access, data.refresh);
-        const userData = data.user as AuthUser;
-        setUser(userData);
-        localStorage.setItem('auth_user', JSON.stringify(userData));
-    }, []);
+        await fetchMe();
+    }, [fetchMe]);
 
 
     /**

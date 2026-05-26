@@ -25,7 +25,7 @@ import {
 import { AppShell } from "../components/AppShell";
 import { Card } from "../components/UI";
 import { cn } from "../constants";
-import { motion, AnimatePresence } from "motion/react";
+import { motion } from "motion/react";
 import { api } from "../lib/api";
 
 type Exam = {
@@ -106,6 +106,19 @@ export const ExamPlanningPage = () => {
   const [editExam, setEditExam] = useState<Exam | null>(null);
   const [editForm, setEditForm] = useState<Partial<Exam>>({});
   const [deleteExam, setDeleteExam] = useState<Exam | null>(null);
+  const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
+  const [roomDeleteId, setRoomDeleteId] = useState<string>('');
+  const [roomDeleteError, setRoomDeleteError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (deleteRoom) {
+      setRoomDeleteId(String(deleteRoom.id ?? ''));
+      setRoomDeleteError(null);
+    } else {
+      setRoomDeleteId('');
+      setRoomDeleteError(null);
+    }
+  }, [deleteRoom]);
 
   // ── Load data from API ────────────────────────────────────────────────────
   useEffect(() => {
@@ -265,6 +278,25 @@ export const ExamPlanningPage = () => {
     setDeleteExam(null);
   };
 
+  const confirmDeleteRoom = async () => {
+    if (!deleteRoom) return;
+    // validate id is a positive integer
+    const idNum = Number(roomDeleteId);
+    if (!roomDeleteId || !Number.isInteger(idNum) || idNum <= 0) {
+      setRoomDeleteError("Please correct the following validation errors and try again.\n- For 'id': Required field is not provided.");
+      return;
+    }
+    try {
+      await api.examinations.rooms.delete(idNum);
+      // remove locally
+      setRooms(p => p.filter(r => r.id !== deleteRoom.id));
+      setDeleteRoom(null);
+    } catch (err: any) {
+      console.error('Failed to delete room:', err);
+      setRoomDeleteError(err?.message || 'Failed to delete room');
+    }
+  };
+
   return (
     <AppShell title="Exam Planning">
       {/* ── HEIGHT CHAIN ── */}
@@ -302,7 +334,7 @@ export const ExamPlanningPage = () => {
             <Card className="p-0 flex flex-col flex-1 min-h-0 overflow-hidden">
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0F0F0] shrink-0 bg-black/[0.01]">
                 <h3 className="font-bold text-[15px] text-[#1A1A1A] flex items-center gap-2">
-                  <Calendar size={18} className="text-[#8B7355]" /> Exam
+                  <Calendar size={14} className="text-[#8B7355]" /> Exam
                   Schedule
                 </h3>
                 <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-[#F0EDE7] text-[#8B7355]">
@@ -415,7 +447,7 @@ export const ExamPlanningPage = () => {
           <div className="flex flex-col gap-5 min-h-0">
             <Card className="p-5 flex flex-col flex-1 min-h-0 overflow-hidden">
               <h3 className="font-bold text-[15px] text-[#1A1A1A] flex items-center gap-2 mb-4 shrink-0">
-                <MapPin size={16} className="text-[#8B7355]" /> Room Assignment
+                <MapPin size={13} className="text-[#8B7355]" /> Room Assignment
               </h3>
               <div className="flex-1 overflow-y-auto space-y-2">
                 {rooms.map((room) => {
@@ -426,7 +458,7 @@ export const ExamPlanningPage = () => {
                     <div
                       key={room.id}
                       className={cn(
-                        "p-3 rounded-lg border flex items-center justify-between",
+                        "p-3 rounded-lg border flex items-center justify-between group",
                         assigned
                           ? "bg-[#F0EDE7]/40 border-[#8B7355]/20"
                           : "bg-white border-[#EBEBEB]",
@@ -452,16 +484,25 @@ export const ExamPlanningPage = () => {
                           </p>
                         </div>
                       </div>
-                      <span
-                        className={cn(
-                          "text-[11px] font-bold px-2.5 py-1 rounded-md",
-                          assigned
-                            ? "bg-[#F0EDE7] text-[#8B7355]"
-                            : "bg-gray-100 text-gray-500",
-                        )}
-                      >
-                        {assigned ? "Assigned" : "Available"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            "text-[11px] font-bold px-2.5 py-1 rounded-md",
+                            assigned
+                              ? "bg-[#F0EDE7] text-[#8B7355]"
+                              : "bg-gray-100 text-gray-500",
+                          )}
+                        >
+                          {assigned ? "Assigned" : "Available"}
+                        </span>
+                        <button
+                          onClick={() => setDeleteRoom(room)}
+                          className="p-1.5 rounded hover:bg-red-50 text-[#9B9B9B] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          title={`Delete ${room.name}`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -476,7 +517,7 @@ export const ExamPlanningPage = () => {
 
             <Card className="p-5 bg-[#FAFAFA] shrink-0">
               <h4 className="text-[13px] font-bold text-[#1A1A1A] flex items-center gap-2 mb-3">
-                <AlertCircle size={14} className="text-[#8B7355]" /> Planning
+                 Planning
                 Notes
               </h4>
               <ul className="space-y-2">
@@ -497,7 +538,7 @@ export const ExamPlanningPage = () => {
       </div>
 
       {/* ── LOTTERY MODAL ── */}
-      <AnimatePresence>
+      <>
         {showLottery && (
           <Overlay onClose={() => !lotterySpinning && setShowLottery(false)}>
             <ModalBox width={520}>
@@ -631,10 +672,10 @@ export const ExamPlanningPage = () => {
             </ModalBox>
           </Overlay>
         )}
-      </AnimatePresence>
+      </>
 
       {/* ── CREATE EXAM MODAL ── */}
-      <AnimatePresence>
+      <>
         {showCreateExam && (
           <Overlay onClose={() => !examDone && setShowCreateExam(false)}>
             <ModalBox width={520}>
@@ -682,7 +723,7 @@ export const ExamPlanningPage = () => {
                   </>
                 )}
               </div>
-              <AnimatePresence mode="wait">
+              <>
                 {!examDone && examStep === 1 && (
                   <motion.div
                     key="ex1"
@@ -874,14 +915,14 @@ export const ExamPlanningPage = () => {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              </>
             </ModalBox>
           </Overlay>
         )}
-      </AnimatePresence>
+      </>
 
       {/* ── ADD ROOM MODAL ── */}
-      <AnimatePresence>
+      <>
         {showAddRoom && (
           <Overlay onClose={() => !roomDone && setShowAddRoom(false)}>
             <ModalBox width={420}>
@@ -931,7 +972,7 @@ export const ExamPlanningPage = () => {
                   </>
                 )}
               </div>
-              <AnimatePresence mode="wait">
+              <>
                 {!roomDone && roomStep === 1 && (
                   <motion.div
                     key="rm1"
@@ -1072,14 +1113,14 @@ export const ExamPlanningPage = () => {
                     </div>
                   </motion.div>
                 )}
-              </AnimatePresence>
+              </>
             </ModalBox>
           </Overlay>
         )}
-      </AnimatePresence>
+      </>
 
       {/* ── EDIT EXAM MODAL ── */}
-      <AnimatePresence>
+      <>
         {editExam && (
           <Overlay onClose={() => setEditExam(null)}>
             <ModalBox width={460}>
@@ -1191,10 +1232,10 @@ export const ExamPlanningPage = () => {
             </ModalBox>
           </Overlay>
         )}
-      </AnimatePresence>
+      </>
 
       {/* ── DELETE CONFIRM ── */}
-      <AnimatePresence>
+      <>
         {deleteExam && (
           <Overlay onClose={() => setDeleteExam(null)}>
             <ModalBox width={400}>
@@ -1237,7 +1278,72 @@ export const ExamPlanningPage = () => {
             </ModalBox>
           </Overlay>
         )}
-      </AnimatePresence>
+      </>
+
+        {/* ── DELETE ROOM CONFIRM ── */}
+        <>
+          {deleteRoom && (
+            <Overlay onClose={() => setDeleteRoom(null)}>
+              <ModalBox width={400}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
+                    <Trash2 size={18} />
+                  </div>
+                  <h3 className="text-[15px] font-bold text-[#1A1A1A] flex-1">
+                    Delete Room
+                  </h3>
+                  <button
+                    onClick={() => setDeleteRoom(null)}
+                    className="p-1.5 rounded-full hover:bg-[#F5F5F5] text-[#9B9B9B] transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <p className="text-[13px] text-[#555] mb-3">
+                  Delete <span className="font-bold text-[#1A1A1A]">"{deleteRoom.name}"</span>?
+                </p>
+
+                <div className="mb-3">
+                  <label className="block text-[11px] font-semibold text-[#9B9B9B] mb-1">id</label>
+                  <input
+                    type="text"
+                    placeholder="id"
+                    value={roomDeleteId}
+                    onChange={(e) => setRoomDeleteId(e.target.value)}
+                    className="fi"
+                  />
+                </div>
+
+                {roomDeleteError && (
+                  <div className="mb-3 p-3 border border-red-200 bg-red-50 text-red-700 rounded">
+                    <p className="font-semibold">Please correct the following validation errors and try again.</p>
+                    <ul className="mt-2 list-inside list-disc text-[13px]">
+                      {roomDeleteError.split('\n').map((line, i) => (
+                        <li key={i}>{line.replace(/^-\s?/, '')}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={confirmDeleteRoom}
+                    className="flex-1 py-2.5 rounded-lg bg-red-500 text-white text-[13px] font-bold hover:bg-red-600 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={14} />
+                    Execute
+                  </button>
+                  <button
+                    onClick={() => setDeleteRoom(null)}
+                    className="flex-1 py-2.5 rounded-lg border border-[#EBEBEB] text-[#555] text-[13px] font-semibold hover:bg-[#F5F5F5] transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </ModalBox>
+            </Overlay>
+          )}
+        </>
 
       <style>{`.fi{width:100%;padding:8px 12px;font-size:13px;border:1px solid #EBEBEB;border-radius:8px;outline:none;background:white;transition:all .15s}.fi:focus{border-color:#8B7355;box-shadow:0 0 0 3px rgba(139,115,85,.12)}`}</style>
     </AppShell>
@@ -1257,7 +1363,7 @@ const Overlay = ({
     animate={{ opacity: 1 }}
     exit={{ opacity: 0 }}
     className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm"
-    onClick={(e) => {
+    onClick={(e: React.MouseEvent<HTMLDivElement>) => {
       if (e.target === e.currentTarget) onClose();
     }}
   >
@@ -1292,12 +1398,24 @@ const MField = ({
   label: string;
   icon?: React.ReactNode;
   children: React.ReactNode;
-}) => (
-  <div>
-    <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#9B9B9B] mb-1.5">
-      {icon && <span className="text-[#8B7355]">{icon}</span>}
-      {label}
-    </label>
-    {children}
-  </div>
-);
+}) => {
+  let renderedIcon: React.ReactNode = icon;
+  if (React.isValidElement(icon)) {
+    // ensure icon elements render at a consistent, smaller size
+    const el = icon as React.ReactElement<any>;
+    renderedIcon = React.cloneElement(el, {
+      size: el.props?.size ?? 14,
+      className: `${el.props?.className ?? ''} text-[#8B7355]`,
+    } as any);
+  }
+
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-[#9B9B9B] mb-1.5">
+        {icon && <span className="flex items-center">{renderedIcon}</span>}
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+};
